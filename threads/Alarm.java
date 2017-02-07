@@ -45,9 +45,23 @@ public class Alarm {
 	 * @see nachos.machine.Timer#getTime()
 	 */
 	public void waitUntil(long x) {
-		// for now, cheat just to get something working (busy waiting is bad)	
+		// for now, cheat just to get something working (busy waiting is bad)
+		waitQueue.waitForAccess(KThread.currentThread());
+		if(KThread.currentThread() == waitQueue.nextThread())
+			WaitUntilUsingThread = KThread.currentThread();
+		while(WaitUntilUsingThread!=KThread.currentThread())
+			WaitCondition.sleep();
+		WaitCondition.wake();
+		waitlock.acquire();
 		long wakeTime = Machine.timer().getTime() + x;
-		while (wakeTime > Machine.timer().getTime())
-			KThread.yield();
+		while (wakeTime > Machine.timer().getTime()) WaitCondition.sleep();
+		WaitCondition.wake();
+		waitlock.release();
 	}
+	
+	private static Lock waitlock = new Lock();
+	private static KThread WaitUntilUsingThread =null;
+	private static Condition WaitCondition= new Condition(waitlock);
+	private static ThreadQueue waitQueue = ThreadedKernel.scheduler
+			.newThreadQueue(true);
 }
