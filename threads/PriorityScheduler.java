@@ -188,7 +188,6 @@ public class PriorityScheduler extends Scheduler {
 		 */
 		public ThreadState(KThread thread) {
 			this.thread = thread;
-
 			setPriority(priorityDefault);
 		}
 
@@ -208,7 +207,60 @@ public class PriorityScheduler extends Scheduler {
 		 */
 		public int getEffectivePriority() {
 			// implement me
-			return priority;
+			return EffectivePriority;
+		}
+		
+		public void setEffectivePriority(int EffectivePriority) {
+			if (this.EffectivePriority == EffectivePriority)
+				return;
+			int tempEP = this.EffectivePriority ;
+			if(EffectivePriority > this.EffectivePriority || this.waitList0.isEmpty()){        // if the New EP bigger than old one or no waiting queue, directly update without consider the waiting queue
+				this.EffectivePriority = EffectivePriority;
+			}
+			else {
+				int a = this.checklist();                                                   //case: some queues wait for it and a is the highest priority of them
+				if(this.EffectivePriority > a)												//old EP bigger than all queue waiting
+					{
+					if(a > EffectivePriority ){
+						this.EffectivePriority = a;		
+						EffectivePriority=a;
+					}		//new EP smaller than the highest priority then set the highest priority to EP
+					else this.EffectivePriority = EffectivePriority;										//new EP bigger than the highest priority then set the new EP to EP
+				}
+				else this.EffectivePriority = a;
+			}
+			if(!this.masterQueue.isEmpty()&&this.EffectivePriority!=tempEP){ 	//case: someone contains it and it has been changed
+				this.EffectivePriority=tempEP;
+				requeue(EffectivePriority);										// then requeue and update new highest priority
+			}
+		}
+		
+		public void requeue(int EffectivePriority){
+			Iterator itoflink = this.masterQueue.iterator();
+			while (itoflink .hasNext()){
+				PriorityQueue temptree=((PriorityQueue)itoflink.next());
+				temptree.waitQueue1.remove(thread);
+				this.EffectivePriority=EffectivePriority;
+				temptree.waitQueue1.add(thread);
+				int newEffectivePriority=getThreadState(temptree.waitQueue1.first()).EffectivePriority;   //update all priority
+				temptree.HighestPriorityofQueue=newEffectivePriority;
+				if(temptree.WaitingThreadofQueue!=null)
+					getThreadState(temptree.WaitingThreadofQueue).setEffectivePriority(newEffectivePriority);
+			}
+		}
+		
+		public int checklist(){
+			Iterator itoflink = this.waitList0.iterator();
+			int temphighest = 0;
+			while (itoflink .hasNext()){
+				PriorityQueue temptree = ((PriorityQueue)itoflink.next());
+				if(!temptree.waitQueue1.isEmpty()){
+					int temp=temptree.pickNextThread().getEffectivePriority();
+					if(temp > temphighest)
+						temphighest = temp;
+				}
+			}
+			return temphighest;
 		}
 
 		/**
@@ -260,5 +312,10 @@ public class PriorityScheduler extends Scheduler {
 
 		/** The priority of the associated thread. */
 		protected int priority;
+		
+		public int EffectivePriority;
+		
+		public LinkedList<PriorityQueue> waitList0 =new LinkedList<PriorityQueue>(); 
 	}
+	
 }
