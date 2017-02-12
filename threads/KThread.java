@@ -68,6 +68,9 @@ public class KThread {
 
 			createIdleThread();
 		}
+		boolean status = Machine.interrupt().disable();
+		joinQueue.acquire(this);
+		Machine.interrupt().restore(status);
 	}
 
 	/**
@@ -199,6 +202,11 @@ public class KThread {
 		toBeDestroyed = currentThread;
 
 		currentThread.status = statusFinished;
+		
+		KThread joinThread = joinQueue.nextThread();
+		if(joinQueue != null){
+			joinThread.ready();
+		}
 
 		sleep();
 	}
@@ -278,11 +286,13 @@ public class KThread {
 	public void join() {
 		Lib.debug(dbgThread, "Joining to thread: " + toString());
 		Lib.assertTrue(this != currentThread);
-		Condition a = new Condition(joinLock);
-		joinLock.acquire();
-		while(this.status!=statusFinished) a.sleep();
-		a.wake();
-		joinLock.release();
+
+		boolean intStatus = Machine.interrupt().disable();
+		if(this.status!=statusFinished){
+			joinQueue.waitForAccess(currentThread);
+			sleep();
+		} 
+		Machine.interrupt().restore(intStatus);
 		return;
 	}	 
 
@@ -453,17 +463,19 @@ public class KThread {
 	 * threads.
 	 */
 	private int id = numCreated++;
-	
-	private Lock joinLock = new Lock();
-	
+		
 	/** Number of times the KThread constructor was called. */
 	private static int numCreated = 0;
 
 	private static ThreadQueue readyQueue = null;
+	
+	private static ThreadQueue joinQueue = null;
 
 	private static KThread currentThread = null;
 
 	private static KThread toBeDestroyed = null;
 
 	private static KThread idleThread = null;
+	
+	
 }

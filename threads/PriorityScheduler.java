@@ -304,6 +304,7 @@ public class PriorityScheduler extends Scheduler {
 		public long waitTime = Machine.timer().getTime();
 		/** The priority of the associated thread. */
 		protected int priority;
+    
 		/** The effective priority of the associated thread. */
 		protected int effectivePriority;
 	}
@@ -394,4 +395,6 @@ public class PriorityScheduler extends Scheduler {
 			KThread.currentThread().yield();	
 		}
     }
+	}
+	
 }
