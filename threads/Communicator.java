@@ -80,6 +80,10 @@ public class Communicator {
 		return wordForTransfer;
 	}
 	
+	public static void selfTest() {
+        CommunicatorTest.runTest();
+    }
+	
 	private int wordForTransfer;
 	private Lock communicatorLock;
 	private Condition conditionVar;
