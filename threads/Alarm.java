@@ -64,4 +64,10 @@ public class Alarm {
 	private static Condition WaitCondition= new Condition(waitlock);
 	private static ThreadQueue waitQueue = ThreadedKernel.scheduler
 			.newThreadQueue(true);
+	
+	public static void selfTest() {
+		AlarmTest.runTest();
+	}
+
+	private static final char dbgAlarm = 'a';
 }

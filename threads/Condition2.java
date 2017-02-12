@@ -63,6 +63,10 @@ public class Condition2 {
 			wake();
 	}
 
+	public static void selfTest() {
+        Condition2Test.runTest();
+    }
+    
 	private Lock conditionLock;
 	private LinkedList<Lock> waitQueue;
 }
