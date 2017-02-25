@@ -10,12 +10,20 @@ import nachos.machine.*;
  * be paired off at this point.
  */
 public class Communicator {
+	private SynchList Speaker; 
+	private SynchList Listener; 
+	private Condition lck;
+	private Lock lock;
+	boolean transact;
 	/**
 	 * Allocate a new communicator.
 	 */
 	public Communicator() {
-		communicatorLock = new Lock();
-		conditionVar = new Condition(communicatorLock);
+		Speaker = new SynchList(); 
+		Listener = new SynchList(); 
+		lock = new Lock();
+		lck = new Condition(lock);
+		transact = false;
 	}
 
 	/**
@@ -29,28 +37,16 @@ public class Communicator {
 	 * @param word the integer to transfer.
 	 */
 	public void speak(int word) {
-		communicatorLock.acquire();
-		wordForTransfer=-1;
-		listenThread = KThread.currentThread();
-		while(speakThread == null){
-			conditionVar.sleep();
+		lock.acquire();
+		while(transact){
+			lck.sleep();
 		}
-		conditionVar.wake();
-		
-		while(wordForTransfer==-1){
-			conditionVar.sleep();
-		}
-		conditionVar.wake();
-		
-		word = wordForTransfer;
-		listenThread = null;
-		while(speakThread != null){
-			conditionVar.sleep();
-		}
-		conditionVar.wake();
-		
-		communicatorLock.release();
-		return;
+		transact=true;
+		Speaker.add(word);
+		Listener.removeFirst(); 
+		transact = false;
+		lck.wake();
+		lock.release();
 	}
 
 	/**
@@ -60,33 +56,36 @@ public class Communicator {
 	 * @return the integer transferred.
 	 */
 	public int listen() {
-		//Lib.assertTrue();
-		communicatorLock.acquire();
-		wordForTransfer=-1;
-		speakThread = KThread.currentThread();
-		while(listenThread == null){
-			conditionVar.sleep();
-		}
-		conditionVar.wake();
-		
-		wordForTransfer = speakThread.hashCode();
-		while(listenThread != null){
-			conditionVar.sleep();
-		}
-		conditionVar.wake();
-		
-		speakThread = null;
-		communicatorLock.release();
-		return wordForTransfer;
+		int word =(Integer)Speaker.removeFirst(); 
+		Listener.add(word);
+		return word; 
 	}
 	
-	public static void selfTest() {
-        CommunicatorTest.runTest();
-    }
+	private static class Speaker implements Runnable{
+		private Communicator c;
+		
+		Speaker(Communicator c){
+			this.c = c;
+		}
+		
+		public void run(){
+			for(int i = 0; i < 10; i++){
+				System.out.println("speaker"+i+ "speaking " + i);
+				c.speak(i);
+				System.out.println("speaker spoken");
+			}
+		}
+	}
 	
-	private int wordForTransfer;
-	private Lock communicatorLock;
-	private Condition conditionVar;
-	private static KThread speakThread = null;
-	private static KThread listenThread = null;
+	public static void selfTest(){
+		Communicator c = new Communicator();
+		new KThread(new Speaker(c)).setName("Speaker").fork();
+		
+		for(int i = 0; i < 10; i++){
+			//System.out.println("listener listening " + i);
+			int x = c.listen();
+			System.out.println("listener"+i+" listened, word = " + x);
+		}
+		
+	}
 }
