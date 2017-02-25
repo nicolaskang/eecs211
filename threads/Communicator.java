@@ -12,9 +12,7 @@ import nachos.machine.*;
 public class Communicator {
 	private SynchList Speaker; 
 	private SynchList Listener; 
-	private Condition lck;
 	private Lock lock;
-	boolean transact;
 	/**
 	 * Allocate a new communicator.
 	 */
@@ -22,8 +20,6 @@ public class Communicator {
 		Speaker = new SynchList(); 
 		Listener = new SynchList(); 
 		lock = new Lock();
-		lck = new Condition(lock);
-		transact = false;
 	}
 
 	/**
@@ -38,14 +34,8 @@ public class Communicator {
 	 */
 	public void speak(int word) {
 		lock.acquire();
-		while(transact){
-			lck.sleep();
-		}
-		transact=true;
 		Speaker.add(word);
 		Listener.removeFirst(); 
-		transact = false;
-		lck.wake();
 		lock.release();
 	}
 
